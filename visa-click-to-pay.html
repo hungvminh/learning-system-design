@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How does Visa Click to Pay work? — interactive diagram</title>
+<style>
+  :root {
+    --bg: #f1efe9; --card: #ffffff; --border: #e2ded4; --ink: #16181d;
+    --sub: #6a6f7a; --accent: #1434CB; --accent-soft: #eceffd; --purple: #8a63d2;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: 'Noto Sans', 'Segoe UI', system-ui, -apple-system, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+  }
+  header { padding: 26px 28px 18px; max-width: 1800px; margin: 0 auto; }
+  h1 { font-size: 30px; margin: 0 0 6px; letter-spacing: -0.4px; }
+  header p { margin: 0; color: var(--sub); font-size: 15px; max-width: 980px; }
+  .wrap { display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 22px; padding: 6px 28px 40px; max-width: 1800px; margin: 0 auto; }
+  @media (max-width: 1080px) { .wrap { grid-template-columns: 1fr; } }
+
+  .pane { background: var(--card); border: 1px solid var(--border); border-radius: 16px; }
+  .side { padding: 16px; align-self: start; position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow: auto; }
+  @media (max-width: 1080px) { .side { position: static; max-height: none; } }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  button {
+    font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer;
+    background: #fff; color: var(--ink); border: 1px solid var(--border);
+    border-radius: 9px; padding: 8px 13px; transition: .15s;
+  }
+  button:hover { border-color: #c3bdae; background: #fbfaf7; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover { background: #0f2aa6; }
+  button:disabled { opacity: .45; cursor: default; }
+
+  .part-head {
+    font-size: 11.5px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+    color: var(--accent); margin: 16px 0 8px; padding-top: 10px; border-top: 1px dashed var(--border);
+  }
+  .part-head:first-of-type { border-top: 0; padding-top: 0; margin-top: 4px; }
+
+  .step {
+    display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 11px; align-items: start;
+    width: 100%; text-align: left; border: 1px solid transparent; background: transparent;
+    border-radius: 11px; padding: 9px 10px; margin-bottom: 2px;
+  }
+  .step:hover { background: #f7f6f2; border-color: var(--border); }
+  .step .badge {
+    width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: 13.5px;
+    border: 1.5px solid #c4caf4;
+  }
+  .step .t { font-weight: 700; font-size: 14.5px; }
+  .step .b { display: none; color: #4a5160; font-size: 13.2px; margin-top: 5px; }
+  .step.active { background: var(--accent-soft); border-color: #b4bcf0; }
+  .step.active .badge { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .step.active .b { display: block; }
+
+  .stage { padding: 14px 16px 16px; }
+  .stage-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .now { font-size: 13.5px; color: var(--sub); min-height: 20px; }
+  .now b { color: var(--ink); }
+  svg#diagram { width: 100%; height: auto; display: block; border-radius: 10px; }
+  svg#diagram .node { transition: opacity .32s ease; }
+  svg#diagram.focused .node.dim { opacity: .10; }
+  svg#diagram .node.lit .flow { stroke-dasharray: 10 8; animation: march 1s linear infinite; }
+  @keyframes march { to { stroke-dashoffset: -18; } }
+  .hint { color: var(--sub); font-size: 12.5px; margin: 10px 2px 0; }
+  .dl { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--border); }
+  .foot { max-width: 1800px; margin: 0 auto; padding: 0 28px 40px; color: var(--sub); font-size: 12.5px; }
+  .foot a { color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <h1>How does Visa Click to Pay work?</h1>
+  <p>Click any step (or an actor in the diagram) to isolate that part of the flow. Use <b>Play</b> to walk through
+     the whole payment, or <b>Show everything</b> for the full picture. Arrow keys step, space plays.</p>
+</header>
+
+<div class="wrap">
+  <nav class="pane side" id="side">
+    <div class="controls">
+      <button id="play" class="primary">▶ Play</button>
+      <button id="prev">← Prev</button>
+      <button id="next">Next →</button>
+      <button id="all">Show everything</button>
+    </div>
+    <div id="list"></div>
+    <div class="dl">
+      <button id="dl-png">⬇ PNG (2×)</button>
+      <button id="dl-svg">⬇ SVG</button>
+      <button id="dl-html">⬇ This page</button>
+    </div>
+  </nav>
+
+  <main class="pane stage">
+    <div class="stage-bar">
+      <div class="now" id="now">Showing the complete flow.</div>
+    </div>
+    <svg xmlns="http://www.w3.org/2000/svg" width="1640" height="1290" viewBox="0 0 1640 1290" id="diagram">
+<rect width="1640" height="1290" fill="#f6f4ef"/>
+<g class="node" data-id="title">
+<text x="70" y="76" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="42" font-weight="700" fill="#16181d" text-anchor="start">How does Visa Click to Pay work?</text>
+<text x="70" y="110" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="17" font-weight="400" fill="#6a6f7a" text-anchor="start">A one-click online checkout built on the EMV® Secure Remote Commerce (SRC) standard and Visa Token Service:</text>
+<text x="70" y="134" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="17" font-weight="400" fill="#6a6f7a" text-anchor="start">the shopper never retypes a card, and the merchant never sees the real card number (PAN).</text>
+</g>
+<g class="node" data-id="panel1">
+<rect x="70" y="196" width="1500" height="230" rx="18" ry="18" fill="#ffffff" stroke="#e2ded4" stroke-width="2"/>
+<rect x="110" y="178" width="321.59999999999997" height="36" rx="18" ry="18" fill="#1434CB"/>
+<text x="270.79999999999995" y="202" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#ffffff" text-anchor="middle" letter-spacing="1.1">PART 1 · ONE-TIME ENROLLMENT</text>
+</g>
+<g class="node" data-id="e1">
+<rect x="183" y="270" width="300" height="120" rx="14" ry="14" fill="#00000010"/>
+<rect x="180" y="266" width="300" height="120" rx="14" ry="14" fill="#eaf2fd" stroke="#9cc2ec" stroke-width="2"/>
+<text x="330" y="300" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#14538f" text-anchor="middle">Cardholder</text>
+<text x="330" y="330" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#454b55" text-anchor="middle">Enrolls once with email,</text>
+<text x="330" y="351" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#454b55" text-anchor="middle">phone number and card</text>
+</g>
+<g class="node" data-id="e2">
+<rect x="643" y="270" width="320" height="120" rx="14" ry="14" fill="#00000010"/>
+<rect x="640" y="266" width="320" height="120" rx="14" ry="14" fill="#eceffd" stroke="#9fa9ea" stroke-width="2"/>
+<text x="800" y="300" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#1434CB" text-anchor="middle">Visa Click to Pay</text>
+<text x="800" y="330" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#454b55" text-anchor="middle">Issuer or Visa verifies the</text>
+<text x="800" y="351" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#454b55" text-anchor="middle">card and creates an SRC</text>
+<text x="800" y="372" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#454b55" text-anchor="middle">payment profile</text>
+</g>
+<g class="node" data-id="e3">
+<rect x="1123" y="270" width="340" height="120" rx="14" ry="14" fill="#00000010"/>
+<rect x="1120" y="266" width="340" height="120" rx="14" ry="14" fill="#fff3e1" stroke="#f0c88c" stroke-width="2"/>
+<text x="1290" y="300" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#9a5b08" text-anchor="middle">Visa Token Service</text>
+<text x="1290" y="330" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#454b55" text-anchor="middle">Swaps the PAN for a network</text>
+<text x="1290" y="351" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#454b55" text-anchor="middle">token stored in the profile —</text>
+<text x="1290" y="372" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#454b55" text-anchor="middle">only the last 4 stay visible</text>
+</g>
+<g class="node" data-id="p1">
+<path class="flow" d="M480,326 L634,326" fill="none" stroke="#5b6270" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="634,326 621,332.5 621,319.5" fill="#5b6270"/>
+<circle cx="528" cy="326" r="15" fill="#1434CB" stroke="#ffffff" stroke-width="2.5"/>
+<text x="528" y="331.5" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#ffffff" text-anchor="middle">1</text>
+<text x="575" y="310" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#3c424d" text-anchor="middle">Enroll card</text>
+</g>
+<g class="node" data-id="p2">
+<path class="flow" d="M960,326 L1114,326" fill="none" stroke="#5b6270" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1114,326 1101,332.5 1101,319.5" fill="#5b6270"/>
+<circle cx="1008" cy="326" r="15" fill="#1434CB" stroke="#ffffff" stroke-width="2.5"/>
+<text x="1008" y="331.5" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#ffffff" text-anchor="middle">2</text>
+<text x="1055" y="310" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#3c424d" text-anchor="middle">Tokenize</text>
+</g>
+<g class="node" data-id="note1">
+<text x="1460" y="410" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#6a6f7a" text-anchor="end">The profile is reusable at every participating merchant — no card entry, no merchant-side account.</text>
+</g>
+<g class="node" data-id="panel2">
+<rect x="70" y="486" width="1500" height="752" rx="18" ry="18" fill="#ffffff" stroke="#e2ded4" stroke-width="2"/>
+<rect x="110" y="468" width="342" height="36" rx="18" ry="18" fill="#1434CB"/>
+<text x="281" y="492" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#ffffff" text-anchor="middle" letter-spacing="1.1">PART 2 · CHECKOUT IN ONE CLICK</text>
+</g>
+<g class="node" data-id="shopper">
+<rect x="183" y="580" width="300" height="150" rx="14" ry="14" fill="#00000010"/>
+<rect x="180" y="576" width="300" height="150" rx="14" ry="14" fill="#eaf2fd" stroke="#9cc2ec" stroke-width="2"/>
+<text x="330" y="610" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#14538f" text-anchor="middle">Shopper</text>
+<text x="330" y="640" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#454b55" text-anchor="middle">On the merchant’s site</text>
+<text x="330" y="661" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#454b55" text-anchor="middle">or app, already signed</text>
+<text x="330" y="682" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#454b55" text-anchor="middle">in to Click to Pay</text>
+</g>
+<g class="node" data-id="merchant">
+<rect x="643" y="580" width="320" height="150" rx="14" ry="14" fill="#00000010"/>
+<rect x="640" y="576" width="320" height="150" rx="14" ry="14" fill="#eaf7ee" stroke="#9dd6b2" stroke-width="2"/>
+<text x="800" y="610" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#1b6b3c" text-anchor="middle">Merchant checkout</text>
+<text x="800" y="640" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#454b55" text-anchor="middle">Click to Pay button,</text>
+<text x="800" y="661" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#454b55" text-anchor="middle">the SRC Initiator /</text>
+<text x="800" y="682" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#454b55" text-anchor="middle">Visa Digital Terminal</text>
+</g>
+<g class="node" data-id="visa">
+<rect x="1123" y="580" width="340" height="150" rx="14" ry="14" fill="#00000010"/>
+<rect x="1120" y="576" width="340" height="150" rx="14" ry="14" fill="#eceffd" stroke="#9fa9ea" stroke-width="2"/>
+<text x="1290" y="610" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#1434CB" text-anchor="middle">Visa Click to Pay</text>
+<text x="1290" y="640" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#454b55" text-anchor="middle">SRC System: device</text>
+<text x="1290" y="661" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#454b55" text-anchor="middle">fingerprint, risk decision,</text>
+<text x="1290" y="682" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#454b55" text-anchor="middle">shopper recognition</text>
+</g>
+<g class="node" data-id="a1">
+<path class="flow" d="M480,651 L634,651" fill="none" stroke="#5b6270" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="634,651 621,657.5 621,644.5" fill="#5b6270"/>
+<circle cx="528" cy="651" r="15" fill="#1434CB" stroke="#ffffff" stroke-width="2.5"/>
+<text x="528" y="656.5" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#ffffff" text-anchor="middle">1</text>
+<text x="557" y="608" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#3c424d" text-anchor="middle">Taps the Click</text>
+<text x="557" y="625" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#3c424d" text-anchor="middle">to Pay button</text>
+</g>
+<g class="node" data-id="a2">
+<path class="flow" d="M960,636 L1114,636" fill="none" stroke="#5b6270" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1114,636 1101,642.5 1101,629.5" fill="#5b6270"/>
+<circle cx="1008" cy="636" r="15" fill="#1434CB" stroke="#ffffff" stroke-width="2.5"/>
+<text x="1008" y="641.5" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#ffffff" text-anchor="middle">2</text>
+<text x="1055" y="600" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#3c424d" text-anchor="middle">Digital Terminal</text>
+<text x="1055" y="617" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#3c424d" text-anchor="middle">initializes SRC</text>
+</g>
+<g class="node" data-id="a4">
+<path class="flow" d="M1114,696 L966,696" fill="none" stroke="#5b6270" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="966,696 979,689.5 979,702.5" fill="#5b6270"/>
+<circle cx="1066" cy="696" r="15" fill="#1434CB" stroke="#ffffff" stroke-width="2.5"/>
+<text x="1066" y="701.5" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#ffffff" text-anchor="middle">4</text>
+<text x="1037" y="716" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#3c424d" text-anchor="middle">Network token +</text>
+<text x="1037" y="733" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#3c424d" text-anchor="middle">one-time cryptogram</text>
+<text x="1037" y="750" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#3c424d" text-anchor="middle">(no PAN)</text>
+</g>
+<g class="node" data-id="a3">
+<path class="flow" d="M300,576 L300,534 L1290,534 L1290,576" fill="none" stroke="#8a63d2" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 7"/>
+<polygon points="1290,576 1283.5,563 1296.5,563" fill="#8a63d2"/>
+<polygon points="300,576 293.5,563 306.5,563" fill="#8a63d2"/>
+<circle cx="360" cy="534" r="15" fill="#8a63d2" stroke="#ffffff" stroke-width="2.5"/>
+<text x="360" y="539.5" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#ffffff" text-anchor="middle">3</text>
+<text x="400" y="522" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#5b3a9b" text-anchor="start">Recognized by device, or verifies with a passkey / e-mail or SMS one-time code, then picks a masked card — all inside Visa’s secure iframe</text>
+</g>
+<g class="node" data-id="psp">
+<rect x="183" y="980" width="300" height="130" rx="14" ry="14" fill="#00000010"/>
+<rect x="180" y="976" width="300" height="130" rx="14" ry="14" fill="#f4edfc" stroke="#c7b2e8" stroke-width="2"/>
+<text x="330" y="1010" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#5b3a9b" text-anchor="middle">PSP / Acquirer</text>
+<text x="330" y="1040" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#454b55" text-anchor="middle">Gets the token and</text>
+<text x="330" y="1061" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#454b55" text-anchor="middle">cryptogram instead of</text>
+<text x="330" y="1082" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#454b55" text-anchor="middle">the card number</text>
+</g>
+<g class="node" data-id="visanet">
+<rect x="643" y="980" width="320" height="130" rx="14" ry="14" fill="#00000010"/>
+<rect x="640" y="976" width="320" height="130" rx="14" ry="14" fill="#eceffd" stroke="#9fa9ea" stroke-width="2"/>
+<text x="800" y="1010" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#1434CB" text-anchor="middle">VisaNet</text>
+<text x="800" y="1040" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#454b55" text-anchor="middle">Validates the cryptogram</text>
+<text x="800" y="1061" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#454b55" text-anchor="middle">and the Token Service</text>
+<text x="800" y="1082" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#454b55" text-anchor="middle">detokenizes to the PAN</text>
+</g>
+<g class="node" data-id="issuer">
+<rect x="1123" y="980" width="340" height="130" rx="14" ry="14" fill="#00000010"/>
+<rect x="1120" y="976" width="340" height="130" rx="14" ry="14" fill="#fdecee" stroke="#f0aab1" stroke-width="2"/>
+<text x="1290" y="1010" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#a32330" text-anchor="middle">Issuer / Bank</text>
+<text x="1290" y="1040" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#454b55" text-anchor="middle">Sees its own PAN and</text>
+<text x="1290" y="1061" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#454b55" text-anchor="middle">approves or declines the</text>
+<text x="1290" y="1082" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#454b55" text-anchor="middle">authorization</text>
+</g>
+<g class="node" data-id="a5">
+<path class="flow" d="M720,726 L720,836 L250,836 L250,970" fill="none" stroke="#5b6270" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="250,970 243.5,957 256.5,957" fill="#5b6270"/>
+<circle cx="720" cy="762" r="15" fill="#1434CB" stroke="#ffffff" stroke-width="2.5"/>
+<text x="720" y="767.5" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#ffffff" text-anchor="middle">5</text>
+<text x="500" y="824" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#3c424d" text-anchor="middle">Authorization request with token + cryptogram</text>
+</g>
+<g class="node" data-id="a6">
+<path class="flow" d="M480,1041 L634,1041" fill="none" stroke="#5b6270" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="634,1041 621,1047.5 621,1034.5" fill="#5b6270"/>
+<circle cx="528" cy="1041" r="15" fill="#1434CB" stroke="#ffffff" stroke-width="2.5"/>
+<text x="528" y="1046.5" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#ffffff" text-anchor="middle">6</text>
+<text x="575" y="1004" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#3c424d" text-anchor="middle">Routed over</text>
+<text x="575" y="1021" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#3c424d" text-anchor="middle">VisaNet</text>
+</g>
+<g class="node" data-id="a7">
+<path class="flow" d="M960,1041 L1114,1041" fill="none" stroke="#5b6270" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1114,1041 1101,1047.5 1101,1034.5" fill="#5b6270"/>
+<circle cx="1008" cy="1041" r="15" fill="#1434CB" stroke="#ffffff" stroke-width="2.5"/>
+<text x="1008" y="1046.5" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#ffffff" text-anchor="middle">7</text>
+<text x="1037" y="1004" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#3c424d" text-anchor="middle">Real PAN and</text>
+<text x="1037" y="1021" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#3c424d" text-anchor="middle">3-D Secure data</text>
+</g>
+<g class="node" data-id="a8">
+<path class="flow" d="M1290,1106 L1290,1166 L330,1166 L330,1112" fill="none" stroke="#5b6270" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="330,1112 336.5,1125 323.5,1125" fill="#5b6270"/>
+<circle cx="1230" cy="1166" r="15" fill="#1434CB" stroke="#ffffff" stroke-width="2.5"/>
+<text x="1230" y="1171.5" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#ffffff" text-anchor="middle">8</text>
+<text x="790" y="1158" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#3c424d" text-anchor="middle">Approve / decline response travels back the same path</text>
+</g>
+<g class="node" data-id="a9">
+<path class="flow" d="M420,970 L420,896 L840,896 L840,732" fill="none" stroke="#5b6270" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="840,732 846.5,745 833.5,745" fill="#5b6270"/>
+<circle cx="420" cy="936" r="15" fill="#1434CB" stroke="#ffffff" stroke-width="2.5"/>
+<text x="420" y="941.5" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#ffffff" text-anchor="middle">9</text>
+<text x="640" y="884" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#3c424d" text-anchor="middle">Approved — order confirmed to the shopper</text>
+</g>
+<g class="node" data-id="callout">
+<rect x="1050" y="800" width="412" height="146" rx="14" ry="14" fill="#f8f7ff" stroke="#b9bdf0" stroke-width="2" stroke-dasharray="8 6"/>
+<text x="1256" y="831" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#1434CB" text-anchor="middle">Why this is safer than a card form</text>
+<text x="1072" y="858" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#454b55" text-anchor="start">•  The merchant stores a token, never the PAN</text>
+<text x="1072" y="879" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#454b55" text-anchor="start">•  The token is scoped to that merchant only</text>
+<text x="1072" y="900" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#454b55" text-anchor="start">•  The cryptogram is valid for one payment</text>
+<text x="1072" y="921" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#454b55" text-anchor="start">•  Issuer gets strong auth signals — fewer declines</text>
+</g>
+<g class="node" data-id="footer">
+<text x="70" y="1268" font-family="&apos;Noto Sans&apos;, &apos;Segoe UI&apos;, system-ui, -apple-system, Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#6a6f7a" text-anchor="start">Key idea: the card number is replaced by a merchant-scoped network token plus a cryptogram that is valid for one transaction only — so stolen checkout data cannot be replayed elsewhere.</text>
+</g>
+</svg>
+    <p class="hint">PAN = primary account number (the 16-digit card number) · SRC = EMV® Secure Remote Commerce · DTVC = the one-time transaction cryptogram.</p>
+  </main>
+</div>
+
+<p class="foot">Illustrative diagram of the publicly documented Click to Pay / EMV® SRC flow, based on
+  <a href="https://developer.visa.com/capabilities/visa-secure-remote-commerce/introduction-to-visa-click-to-pay-api">Visa's Click to Pay API introduction</a> and the
+  <a href="https://developer.visa.com/capabilities/visa-id-credential/click-to-pay-with-vica">Click to Pay with VICA overview</a>.
+  Not affiliated with or endorsed by Visa; EMV® is a registered trademark of EMVCo. Wording is paraphrased from those sources.</p>
+
+<script>
+const STEPS = [{"part":"Enrollment","n":1,"title":"Enroll the card once","show":["e1","e2","p1","note1"],"body":"The cardholder registers once with an email address, mobile number and card. Many issuers auto-enroll their cardholders, so the profile often already exists the first time a shopper meets a Click to Pay button. The profile is identity-based, so it follows the shopper to every participating merchant."},{"part":"Enrollment","n":2,"title":"Replace the card number with a token","show":["e2","e3","p2","note1"],"body":"Visa Token Service swaps the 16-digit PAN for a network token held inside the SRC profile. From this point on, shoppers and merchants only see the masked card: brand plus the last four digits."},{"part":"Checkout","n":1,"title":"Shopper taps Click to Pay","show":["shopper","merchant","a1"],"body":"At checkout the shopper chooses the Click to Pay button instead of filling in a card form. No card number, no expiry, no CVV, and no merchant account to create."},{"part":"Checkout","n":2,"title":"The Digital Terminal initializes SRC","show":["merchant","visa","a2"],"body":"The merchant page is the SRC Initiator: it loads Visa’s Digital Terminal in a hidden iframe. On load, the SRC system does device fingerprinting, makes a risk decision, spins up the passkey service, and hands back an initialization session id."},{"part":"Checkout","n":3,"title":"Recognize or authenticate the shopper","show":["shopper","visa","a3"],"body":"If Visa recognizes the device, the shopper is asked for nothing at all. Otherwise they verify with a passkey (biometric) or a one-time code sent by email or SMS, then pick a masked card from the candidate list. All of this happens inside Visa’s iframe, so the merchant page never touches the credential."},{"part":"Checkout","n":4,"title":"Visa returns a payment credential","show":["visa","merchant","a4","callout"],"body":"The merchant receives a network token plus a cryptogram that is unique to this one transaction — never the real card number. That is what makes stolen checkout data useless to replay."},{"part":"Checkout","n":5,"title":"Authorization request goes out","show":["merchant","psp","a5"],"body":"The merchant passes the token and cryptogram to its payment service provider or acquirer exactly as it would a normal card payment — no new authorization plumbing is required."},{"part":"Checkout","n":6,"title":"Routed over VisaNet","show":["psp","visanet","a6"],"body":"The acquirer routes the authorization over VisaNet, where the token and cryptogram are checked before the request reaches the issuer."},{"part":"Checkout","n":7,"title":"Detokenize, then the issuer decides","show":["visanet","issuer","a7"],"body":"VisaNet validates the cryptogram and Visa Token Service maps the token back to the real PAN. The issuer sees its own card number together with strong authentication data, which typically means fewer false declines than a raw card form."},{"part":"Checkout","n":8,"title":"Response travels back","show":["issuer","psp","a8"],"body":"The approve or decline decision returns along the same path: issuer, VisaNet, acquirer."},{"part":"Checkout","n":9,"title":"Order confirmed","show":["psp","merchant","a9","footer"],"body":"The merchant gets the result and confirms the order to the shopper. Clearing and settlement then run as they do for any other Visa transaction."}];
+const BASE  = ["title","panel1","panel2","footer"];
+const svg   = document.getElementById('diagram');
+const nodes = Array.from(svg.querySelectorAll('.node'));
+const list  = document.getElementById('list');
+const now   = document.getElementById('now');
+let current = -1, timer = null;
+
+/* ---------- build the step list ---------- */
+let lastPart = null;
+STEPS.forEach((s, i) => {
+  if (s.part !== lastPart) {
+    const h = document.createElement('div');
+    h.className = 'part-head';
+    h.textContent = s.part === 'Enrollment' ? 'Part 1 · one-time enrollment' : 'Part 2 · checkout in one click';
+    list.appendChild(h);
+    lastPart = s.part;
+  }
+  const b = document.createElement('button');
+  b.className = 'step';
+  b.innerHTML = '<span class="badge">' + s.n + '</span><span><span class="t"></span><span class="b"></span></span>';
+  b.querySelector('.t').textContent = s.title;
+  b.querySelector('.b').textContent = s.body;
+  b.addEventListener('click', () => { stop(); show(i); });
+  list.appendChild(b);
+});
+const buttons = Array.from(list.querySelectorAll('.step'));
+
+/* ---------- state ---------- */
+function show(i) {
+  current = i;
+  const s = STEPS[i];
+  const keep = new Set([...BASE, ...s.show]);
+  svg.classList.add('focused');
+  nodes.forEach(n => {
+    const on = keep.has(n.dataset.id);
+    n.classList.toggle('dim', !on);
+    n.classList.toggle('lit', on && s.show.includes(n.dataset.id));
+  });
+  buttons.forEach((b, j) => b.classList.toggle('active', j === i));
+  buttons[i].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  const part = s.part === 'Enrollment' ? 'Enrollment' : 'Checkout';
+  now.innerHTML = part + ' step ' + s.n + ' of ' + STEPS.filter(x => x.part === s.part).length + ' — <b>' + s.title + '</b>';
+}
+
+function showAll() {
+  current = -1;
+  svg.classList.remove('focused');
+  nodes.forEach(n => n.classList.remove('dim', 'lit'));
+  buttons.forEach(b => b.classList.remove('active'));
+  now.textContent = 'Showing the complete flow.';
+}
+
+function step(d) {
+  const n = STEPS.length;
+  show(current < 0 ? (d > 0 ? 0 : n - 1) : (current + d + n) % n);
+}
+
+/* ---------- play / pause ---------- */
+const playBtn = document.getElementById('play');
+function play() {
+  if (timer) return;
+  if (current < 0 || current === STEPS.length - 1) show(0); else step(1);
+  playBtn.textContent = '⏸ Pause';
+  timer = setInterval(() => {
+    if (current === STEPS.length - 1) { stop(); return; }
+    step(1);
+  }, 3600);
+}
+function stop() {
+  if (timer) clearInterval(timer);
+  timer = null;
+  playBtn.textContent = '▶ Play';
+}
+playBtn.addEventListener('click', () => (timer ? stop() : play()));
+document.getElementById('next').addEventListener('click', () => { stop(); step(1); });
+document.getElementById('prev').addEventListener('click', () => { stop(); step(-1); });
+document.getElementById('all').addEventListener('click', () => { stop(); showAll(); });
+
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key === 'ArrowRight') { stop(); step(1); e.preventDefault(); }
+  if (e.key === 'ArrowLeft') { stop(); step(-1); e.preventDefault(); }
+  if (e.key === 'Escape') { stop(); showAll(); }
+  if (e.key === ' ') { timer ? stop() : play(); e.preventDefault(); }
+});
+
+/* ---------- clicking actors in the diagram ---------- */
+nodes.forEach(n => {
+  const id = n.dataset.id;
+  if (BASE.includes(id)) return;
+  n.style.cursor = 'pointer';
+  n.addEventListener('click', () => {
+    const from = current + 1;
+    const order = STEPS.map((s, i) => i).slice(from).concat(STEPS.map((s, i) => i).slice(0, from));
+    const hit = order.find(i => STEPS[i].show.includes(id));
+    if (hit !== undefined) { stop(); show(hit); }
+  });
+});
+
+/* ---------- downloads ---------- */
+function save(blob, name) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name; document.body.appendChild(a); a.click();
+  a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+function cleanSvg() {
+  const clone = svg.cloneNode(true);
+  clone.classList.remove('focused');
+  clone.querySelectorAll('.node').forEach(n => { n.classList.remove('dim', 'lit'); n.removeAttribute('style'); });
+  clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  return new XMLSerializer().serializeToString(clone);
+}
+document.getElementById('dl-svg').addEventListener('click', () => {
+  save(new Blob([cleanSvg()], { type: 'image/svg+xml' }), 'visa-click-to-pay.svg');
+});
+document.getElementById('dl-png').addEventListener('click', () => {
+  const src = cleanSvg();
+  const img = new Image();
+  img.onload = () => {
+    const vb = svg.viewBox.baseVal, scale = 2;
+    const cv = document.createElement('canvas');
+    cv.width = vb.width * scale; cv.height = vb.height * scale;
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#f6f4ef'; ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.drawImage(img, 0, 0, cv.width, cv.height);
+    cv.toBlob(b => save(b, 'visa-click-to-pay.png'), 'image/png');
+  };
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(src);
+});
+document.getElementById('dl-html').addEventListener('click', () => {
+  const wasPlaying = !!timer; stop(); const keep = current; showAll();
+  save(new Blob(['<!DOCTYPE html>\n' + document.documentElement.outerHTML], { type: 'text/html' }), 'visa-click-to-pay.html');
+  if (keep >= 0) show(keep);
+  if (wasPlaying) play();
+});
+</script>
+</body>
+</html>

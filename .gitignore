@@ -1,0 +1,4 @@
+node_modules/
+.kiro/artifacts/
+*.log
+.DS_Store

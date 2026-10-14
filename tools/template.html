@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How does Visa Click to Pay work? — interactive diagram</title>
+<style>
+  :root {
+    --bg: #f1efe9; --card: #ffffff; --border: #e2ded4; --ink: #16181d;
+    --sub: #6a6f7a; --accent: #1434CB; --accent-soft: #eceffd; --purple: #8a63d2;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: 'Noto Sans', 'Segoe UI', system-ui, -apple-system, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+  }
+  header { padding: 26px 28px 18px; max-width: 1800px; margin: 0 auto; }
+  h1 { font-size: 30px; margin: 0 0 6px; letter-spacing: -0.4px; }
+  header p { margin: 0; color: var(--sub); font-size: 15px; max-width: 980px; }
+  .wrap { display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 22px; padding: 6px 28px 40px; max-width: 1800px; margin: 0 auto; }
+  @media (max-width: 1080px) { .wrap { grid-template-columns: 1fr; } }
+
+  .pane { background: var(--card); border: 1px solid var(--border); border-radius: 16px; }
+  .side { padding: 16px; align-self: start; position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow: auto; }
+  @media (max-width: 1080px) { .side { position: static; max-height: none; } }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  button {
+    font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer;
+    background: #fff; color: var(--ink); border: 1px solid var(--border);
+    border-radius: 9px; padding: 8px 13px; transition: .15s;
+  }
+  button:hover { border-color: #c3bdae; background: #fbfaf7; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover { background: #0f2aa6; }
+  button:disabled { opacity: .45; cursor: default; }
+
+  .part-head {
+    font-size: 11.5px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+    color: var(--accent); margin: 16px 0 8px; padding-top: 10px; border-top: 1px dashed var(--border);
+  }
+  .part-head:first-of-type { border-top: 0; padding-top: 0; margin-top: 4px; }
+
+  .step {
+    display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 11px; align-items: start;
+    width: 100%; text-align: left; border: 1px solid transparent; background: transparent;
+    border-radius: 11px; padding: 9px 10px; margin-bottom: 2px;
+  }
+  .step:hover { background: #f7f6f2; border-color: var(--border); }
+  .step .badge {
+    width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: 13.5px;
+    border: 1.5px solid #c4caf4;
+  }
+  .step .t { font-weight: 700; font-size: 14.5px; }
+  .step .b { display: none; color: #4a5160; font-size: 13.2px; margin-top: 5px; }
+  .step.active { background: var(--accent-soft); border-color: #b4bcf0; }
+  .step.active .badge { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .step.active .b { display: block; }
+
+  .stage { padding: 14px 16px 16px; }
+  .stage-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .now { font-size: 13.5px; color: var(--sub); min-height: 20px; }
+  .now b { color: var(--ink); }
+  svg#diagram { width: 100%; height: auto; display: block; border-radius: 10px; }
+  svg#diagram .node { transition: opacity .32s ease; }
+  svg#diagram.focused .node.dim { opacity: .10; }
+  svg#diagram .node.lit .flow { stroke-dasharray: 10 8; animation: march 1s linear infinite; }
+  @keyframes march { to { stroke-dashoffset: -18; } }
+  .hint { color: var(--sub); font-size: 12.5px; margin: 10px 2px 0; }
+  .dl { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--border); }
+  .foot { max-width: 1800px; margin: 0 auto; padding: 0 28px 40px; color: var(--sub); font-size: 12.5px; }
+  .foot a { color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <h1>How does Visa Click to Pay work?</h1>
+  <p>Click any step (or an actor in the diagram) to isolate that part of the flow. Use <b>Play</b> to walk through
+     the whole payment, or <b>Show everything</b> for the full picture. Arrow keys step, space plays.</p>
+</header>
+
+<div class="wrap">
+  <nav class="pane side" id="side">
+    <div class="controls">
+      <button id="play" class="primary">▶ Play</button>
+      <button id="prev">← Prev</button>
+      <button id="next">Next →</button>
+      <button id="all">Show everything</button>
+    </div>
+    <div id="list"></div>
+    <div class="dl">
+      <button id="dl-png">⬇ PNG (2×)</button>
+      <button id="dl-svg">⬇ SVG</button>
+      <button id="dl-html">⬇ This page</button>
+    </div>
+  </nav>
+
+  <main class="pane stage">
+    <div class="stage-bar">
+      <div class="now" id="now">Showing the complete flow.</div>
+    </div>
+    __SVG__
+    <p class="hint">PAN = primary account number (the 16-digit card number) · SRC = EMV® Secure Remote Commerce · DTVC = the one-time transaction cryptogram.</p>
+  </main>
+</div>
+
+<p class="foot">Illustrative diagram of the publicly documented Click to Pay / EMV® SRC flow, based on
+  <a href="https://developer.visa.com/capabilities/visa-secure-remote-commerce/introduction-to-visa-click-to-pay-api">Visa's Click to Pay API introduction</a> and the
+  <a href="https://developer.visa.com/capabilities/visa-id-credential/click-to-pay-with-vica">Click to Pay with VICA overview</a>.
+  Not affiliated with or endorsed by Visa; EMV® is a registered trademark of EMVCo. Wording is paraphrased from those sources.</p>
+
+<script>
+const STEPS = __STEPS__;
+const BASE  = __BASE__;
+const svg   = document.getElementById('diagram');
+const nodes = Array.from(svg.querySelectorAll('.node'));
+const list  = document.getElementById('list');
+const now   = document.getElementById('now');
+let current = -1, timer = null;
+
+/* ---------- build the step list ---------- */
+let lastPart = null;
+STEPS.forEach((s, i) => {
+  if (s.part !== lastPart) {
+    const h = document.createElement('div');
+    h.className = 'part-head';
+    h.textContent = s.part === 'Enrollment' ? 'Part 1 · one-time enrollment' : 'Part 2 · checkout in one click';
+    list.appendChild(h);
+    lastPart = s.part;
+  }
+  const b = document.createElement('button');
+  b.className = 'step';
+  b.innerHTML = '<span class="badge">' + s.n + '</span><span><span class="t"></span><span class="b"></span></span>';
+  b.querySelector('.t').textContent = s.title;
+  b.querySelector('.b').textContent = s.body;
+  b.addEventListener('click', () => { stop(); show(i); });
+  list.appendChild(b);
+});
+const buttons = Array.from(list.querySelectorAll('.step'));
+
+/* ---------- state ---------- */
+function show(i) {
+  current = i;
+  const s = STEPS[i];
+  const keep = new Set([...BASE, ...s.show]);
+  svg.classList.add('focused');
+  nodes.forEach(n => {
+    const on = keep.has(n.dataset.id);
+    n.classList.toggle('dim', !on);
+    n.classList.toggle('lit', on && s.show.includes(n.dataset.id));
+  });
+  buttons.forEach((b, j) => b.classList.toggle('active', j === i));
+  buttons[i].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  const part = s.part === 'Enrollment' ? 'Enrollment' : 'Checkout';
+  now.innerHTML = part + ' step ' + s.n + ' of ' + STEPS.filter(x => x.part === s.part).length + ' — <b>' + s.title + '</b>';
+}
+
+function showAll() {
+  current = -1;
+  svg.classList.remove('focused');
+  nodes.forEach(n => n.classList.remove('dim', 'lit'));
+  buttons.forEach(b => b.classList.remove('active'));
+  now.textContent = 'Showing the complete flow.';
+}
+
+function step(d) {
+  const n = STEPS.length;
+  show(current < 0 ? (d > 0 ? 0 : n - 1) : (current + d + n) % n);
+}
+
+/* ---------- play / pause ---------- */
+const playBtn = document.getElementById('play');
+function play() {
+  if (timer) return;
+  if (current < 0 || current === STEPS.length - 1) show(0); else step(1);
+  playBtn.textContent = '⏸ Pause';
+  timer = setInterval(() => {
+    if (current === STEPS.length - 1) { stop(); return; }
+    step(1);
+  }, 3600);
+}
+function stop() {
+  if (timer) clearInterval(timer);
+  timer = null;
+  playBtn.textContent = '▶ Play';
+}
+playBtn.addEventListener('click', () => (timer ? stop() : play()));
+document.getElementById('next').addEventListener('click', () => { stop(); step(1); });
+document.getElementById('prev').addEventListener('click', () => { stop(); step(-1); });
+document.getElementById('all').addEventListener('click', () => { stop(); showAll(); });
+
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key === 'ArrowRight') { stop(); step(1); e.preventDefault(); }
+  if (e.key === 'ArrowLeft') { stop(); step(-1); e.preventDefault(); }
+  if (e.key === 'Escape') { stop(); showAll(); }
+  if (e.key === ' ') { timer ? stop() : play(); e.preventDefault(); }
+});
+
+/* ---------- clicking actors in the diagram ---------- */
+nodes.forEach(n => {
+  const id = n.dataset.id;
+  if (BASE.includes(id)) return;
+  n.style.cursor = 'pointer';
+  n.addEventListener('click', () => {
+    const from = current + 1;
+    const order = STEPS.map((s, i) => i).slice(from).concat(STEPS.map((s, i) => i).slice(0, from));
+    const hit = order.find(i => STEPS[i].show.includes(id));
+    if (hit !== undefined) { stop(); show(hit); }
+  });
+});
+
+/* ---------- downloads ---------- */
+function save(blob, name) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name; document.body.appendChild(a); a.click();
+  a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+function cleanSvg() {
+  const clone = svg.cloneNode(true);
+  clone.classList.remove('focused');
+  clone.querySelectorAll('.node').forEach(n => { n.classList.remove('dim', 'lit'); n.removeAttribute('style'); });
+  clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  return new XMLSerializer().serializeToString(clone);
+}
+document.getElementById('dl-svg').addEventListener('click', () => {
+  save(new Blob([cleanSvg()], { type: 'image/svg+xml' }), 'visa-click-to-pay.svg');
+});
+document.getElementById('dl-png').addEventListener('click', () => {
+  const src = cleanSvg();
+  const img = new Image();
+  img.onload = () => {
+    const vb = svg.viewBox.baseVal, scale = 2;
+    const cv = document.createElement('canvas');
+    cv.width = vb.width * scale; cv.height = vb.height * scale;
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#f6f4ef'; ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.drawImage(img, 0, 0, cv.width, cv.height);
+    cv.toBlob(b => save(b, 'visa-click-to-pay.png'), 'image/png');
+  };
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(src);
+});
+document.getElementById('dl-html').addEventListener('click', () => {
+  const wasPlaying = !!timer; stop(); const keep = current; showAll();
+  save(new Blob(['<!DOCTYPE html>\n' + document.documentElement.outerHTML], { type: 'text/html' }), 'visa-click-to-pay.html');
+  if (keep >= 0) show(keep);
+  if (wasPlaying) play();
+});
+</script>
+</body>
+</html>
