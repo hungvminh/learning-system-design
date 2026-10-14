@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>System Design Lessons</title>
+<style>
+  :root { --bg:#f1efe9; --card:#fff; --border:#e2ded4; --ink:#16181d; --sub:#6a6f7a; --accent:#1434CB; }
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif;line-height:1.5}
+  header{max-width:1100px;margin:0 auto;padding:46px 28px 10px}
+  h1{font-size:34px;margin:0 0 8px;letter-spacing:-.5px}
+  header p{color:var(--sub);font-size:16px;margin:0;max-width:720px}
+  .grid{max-width:1100px;margin:0 auto;padding:24px 28px 60px;
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px}
+  .card{display:block;background:var(--card);border:1px solid var(--border);border-radius:16px;
+    padding:20px;text-decoration:none;color:inherit;transition:.16s}
+  .card:hover{transform:translateY(-2px);box-shadow:0 8px 24px #0000000f;border-color:#c7c1b2}
+  .cat{font-size:11px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
+  .card h2{font-size:19px;margin:0 0 8px}
+  .card p{color:var(--sub);font-size:14px;margin:0 0 14px}
+  .tags{display:flex;flex-wrap:wrap;gap:6px}
+  .tag{font-size:11.5px;background:#eceffd;color:#2436a7;border-radius:20px;padding:3px 10px}
+  footer{max-width:1100px;margin:0 auto;padding:0 28px 50px;color:var(--sub);font-size:12.5px}
+</style>
+</head>
+<body>
+<header>
+  <h1>System Design Lessons</h1>
+  <p>Interactive, step-through diagrams of how real systems work. Pick a lesson to walk through its flow,
+     highlight each actor, and export the diagram.</p>
+</header>
+<main class="grid">
+    <a class="card" href="../lessons/visa-click-to-pay/dist/index.html">
+      <div class="cat">Payments</div>
+      <h2>How does Visa Click to Pay work?</h2>
+      <p>A one-click online checkout built on the EMV® SRC standard and Visa Token Service: the shopper never retypes a card, and the merchant never sees the real card number (PAN).</p>
+      <div class="tags"><span class="tag">payments</span><span class="tag">tokenization</span><span class="tag">EMV SRC</span><span class="tag">checkout</span><span class="tag">security</span></div>
+    </a>
+</main>
+<footer>Built with the shared diagram engine in <code>/engine</code>. Each lesson lives in <code>/lessons/&lt;slug&gt;</code>.</footer>
+</body>
+</html>

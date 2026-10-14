@@ -1,43 +1,65 @@
 # learning-system-design
 
-System design learning materials and diagrams.
+Interactive, step-through diagrams explaining how real systems work — a growing
+collection of system-design lessons. Each lesson is a self-contained folder with
+a short writeup, its diagram source, and generated artifacts (interactive HTML,
+PNG, SVG). All lessons share one rendering **engine**, so adding a new lesson
+means writing a small data file, not re-implementing the diagram machinery.
 
-## Visa Click to Pay
+## Repository layout
 
-An illustration of how **Visa Click to Pay** works — a one-click online checkout
-built on the EMV® Secure Remote Commerce (SRC) standard and Visa Token Service.
-The shopper never retypes a card, and the merchant never sees the real card
-number (PAN).
-
-### Files
-
-| File | Description |
-|------|-------------|
-| [`visa-click-to-pay.html`](visa-click-to-pay.html) | **Interactive** single-file diagram — step through the flow, highlight actors, and export PNG/SVG. Open in any browser; no network required. |
-| [`visa-click-to-pay.png`](visa-click-to-pay.png) | Static image, 3280 × 2580 (2×). |
-| [`visa-click-to-pay.svg`](visa-click-to-pay.svg) | Static vector version. |
-| `tools/` | Generator source (`diagram.js` layout, `build.js`, `template.html`). |
-
-### Regenerating
-
-```bash
-cd tools
-npm install          # only needed for the PNG (@resvg/resvg-js)
-node build.js        # writes the .svg, .png and interactive .html
+```
+learning-system-design/
+├── engine/                     shared, lesson-agnostic diagram engine
+│   ├── render.js               SVG primitives + Canvas API (box/arrow/panel/…)
+│   ├── build.js                builds one or ALL lessons + docs + this catalog
+│   ├── template.html           interactive page shell
+│   └── package.json
+│
+├── lessons/
+│   └── <slug>/
+│       ├── README.md           the lesson writeup
+│       ├── diagram.js          content only: actors, flows, walkthrough steps
+│       └── dist/               generated — index.html, diagram.png, diagram.svg
+│
+├── docs/
+│   └── index.html              generated landing page linking every lesson
+│
+└── CONTRIBUTING.md             how to add a new lesson
 ```
 
-The HTML and SVG have **no dependencies**; `npm install` is only required to
-rasterize the PNG.
+**Why this shape:** the ~250-line SVG/interaction engine lives once in
+`engine/`. A lesson's `diagram.js` only *describes* its boxes, arrows and steps.
+`node engine/build.js` discovers every `lessons/*/diagram.js`, regenerates each
+lesson's `dist/`, and rebuilds the `docs/` index and the catalog below.
 
-### Interactive controls
+## Browse
 
-- Click any step (or an actor in the diagram) to isolate that part of the flow.
-- **Play** walks the whole payment; **Prev / Next / Show everything** navigate.
-- Keyboard: `←` `→` step, `space` play/pause, `Esc` reset.
-- Built-in **⬇ PNG / SVG / HTML** download buttons.
+Open [`docs/index.html`](docs/index.html) for the lesson gallery, or jump into a
+lesson's `dist/index.html` directly.
 
----
+## Lessons
 
-*Illustrative diagram of the publicly documented Click to Pay / EMV® SRC flow,
-based on Visa's developer documentation. Not affiliated with or endorsed by Visa;
-EMV® is a registered trademark of EMVCo.*
+<!-- CATALOG:START -->
+| Lesson | Category | Artifacts |
+|--------|----------|-----------|
+| **[How does Visa Click to Pay work?](lessons/visa-click-to-pay/)** | Payments | [interactive](lessons/visa-click-to-pay/dist/index.html) · [png](lessons/visa-click-to-pay/dist/diagram.png) · [svg](lessons/visa-click-to-pay/dist/diagram.svg) |
+<!-- CATALOG:END -->
+
+## Build
+
+```bash
+cd engine
+npm install            # only needed to rasterize PNGs (@resvg/resvg-js)
+node build.js          # build every lesson + docs + README catalog
+node build.js <slug>   # build a single lesson
+```
+
+The interactive HTML and SVG have **no runtime dependencies**; `npm install` is
+only required for the PNG export.
+
+## Add a lesson
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Short version: copy an existing
+`lessons/<slug>/` folder, edit `diagram.js` (metadata + `draw()` + `STEPS`),
+and run the build.

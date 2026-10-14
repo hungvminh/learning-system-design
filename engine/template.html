@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>How does Visa Click to Pay work? — interactive diagram</title>
+<title>__TITLE__</title>
 <style>
   :root {
     --bg: #f1efe9; --card: #ffffff; --border: #e2ded4; --ink: #16181d;
@@ -17,6 +17,9 @@
     line-height: 1.5;
   }
   header { padding: 26px 28px 18px; max-width: 1800px; margin: 0 auto; }
+  .crumbs { font-size: 13px; margin-bottom: 10px; }
+  .crumbs a { color: var(--accent); text-decoration: none; }
+  .crumbs a:hover { text-decoration: underline; }
   h1 { font-size: 30px; margin: 0 0 6px; letter-spacing: -0.4px; }
   header p { margin: 0; color: var(--sub); font-size: 15px; max-width: 980px; }
   .wrap { display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 22px; padding: 6px 28px 40px; max-width: 1800px; margin: 0 auto; }
@@ -77,9 +80,10 @@
 </head>
 <body>
 <header>
-  <h1>How does Visa Click to Pay work?</h1>
+  <div class="crumbs">__CRUMBS__</div>
+  <h1>__H1__</h1>
   <p>Click any step (or an actor in the diagram) to isolate that part of the flow. Use <b>Play</b> to walk through
-     the whole payment, or <b>Show everything</b> for the full picture. Arrow keys step, space plays.</p>
+     the whole flow, or <b>Show everything</b> for the full picture. Arrow keys step, space plays.</p>
 </header>
 
 <div class="wrap">
@@ -103,31 +107,31 @@
       <div class="now" id="now">Showing the complete flow.</div>
     </div>
     __SVG__
-    <p class="hint">PAN = primary account number (the 16-digit card number) · SRC = EMV® Secure Remote Commerce · DTVC = the one-time transaction cryptogram.</p>
+    <p class="hint">__HINT__</p>
   </main>
 </div>
 
-<p class="foot">Illustrative diagram of the publicly documented Click to Pay / EMV® SRC flow, based on
-  <a href="https://developer.visa.com/capabilities/visa-secure-remote-commerce/introduction-to-visa-click-to-pay-api">Visa's Click to Pay API introduction</a> and the
-  <a href="https://developer.visa.com/capabilities/visa-id-credential/click-to-pay-with-vica">Click to Pay with VICA overview</a>.
-  Not affiliated with or endorsed by Visa; EMV® is a registered trademark of EMVCo. Wording is paraphrased from those sources.</p>
+<p class="foot">__FOOTNOTE__</p>
 
 <script>
 const STEPS = __STEPS__;
 const BASE  = __BASE__;
+const SLUG  = "__SLUG__";
 const svg   = document.getElementById('diagram');
 const nodes = Array.from(svg.querySelectorAll('.node'));
 const list  = document.getElementById('list');
 const now   = document.getElementById('now');
 let current = -1, timer = null;
 
-/* ---------- build the step list ---------- */
+const partNames = {};
+STEPS.forEach(s => { partNames[s.part] = (partNames[s.part] || 0) + 1; });
+
 let lastPart = null;
 STEPS.forEach((s, i) => {
   if (s.part !== lastPart) {
     const h = document.createElement('div');
     h.className = 'part-head';
-    h.textContent = s.part === 'Enrollment' ? 'Part 1 · one-time enrollment' : 'Part 2 · checkout in one click';
+    h.textContent = s.part;
     list.appendChild(h);
     lastPart = s.part;
   }
@@ -141,7 +145,6 @@ STEPS.forEach((s, i) => {
 });
 const buttons = Array.from(list.querySelectorAll('.step'));
 
-/* ---------- state ---------- */
 function show(i) {
   current = i;
   const s = STEPS[i];
@@ -154,8 +157,7 @@ function show(i) {
   });
   buttons.forEach((b, j) => b.classList.toggle('active', j === i));
   buttons[i].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-  const part = s.part === 'Enrollment' ? 'Enrollment' : 'Checkout';
-  now.innerHTML = part + ' step ' + s.n + ' of ' + STEPS.filter(x => x.part === s.part).length + ' — <b>' + s.title + '</b>';
+  now.innerHTML = s.part + ' step ' + s.n + ' of ' + partNames[s.part] + ' — <b>' + s.title + '</b>';
 }
 
 function showAll() {
@@ -171,7 +173,6 @@ function step(d) {
   show(current < 0 ? (d > 0 ? 0 : n - 1) : (current + d + n) % n);
 }
 
-/* ---------- play / pause ---------- */
 const playBtn = document.getElementById('play');
 function play() {
   if (timer) return;
@@ -200,7 +201,6 @@ document.addEventListener('keydown', (e) => {
   if (e.key === ' ') { timer ? stop() : play(); e.preventDefault(); }
 });
 
-/* ---------- clicking actors in the diagram ---------- */
 nodes.forEach(n => {
   const id = n.dataset.id;
   if (BASE.includes(id)) return;
@@ -213,7 +213,6 @@ nodes.forEach(n => {
   });
 });
 
-/* ---------- downloads ---------- */
 function save(blob, name) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -228,7 +227,7 @@ function cleanSvg() {
   return new XMLSerializer().serializeToString(clone);
 }
 document.getElementById('dl-svg').addEventListener('click', () => {
-  save(new Blob([cleanSvg()], { type: 'image/svg+xml' }), 'visa-click-to-pay.svg');
+  save(new Blob([cleanSvg()], { type: 'image/svg+xml' }), SLUG + '.svg');
 });
 document.getElementById('dl-png').addEventListener('click', () => {
   const src = cleanSvg();
@@ -240,13 +239,13 @@ document.getElementById('dl-png').addEventListener('click', () => {
     const ctx = cv.getContext('2d');
     ctx.fillStyle = '#f6f4ef'; ctx.fillRect(0, 0, cv.width, cv.height);
     ctx.drawImage(img, 0, 0, cv.width, cv.height);
-    cv.toBlob(b => save(b, 'visa-click-to-pay.png'), 'image/png');
+    cv.toBlob(b => save(b, SLUG + '.png'), 'image/png');
   };
   img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(src);
 });
 document.getElementById('dl-html').addEventListener('click', () => {
   const wasPlaying = !!timer; stop(); const keep = current; showAll();
-  save(new Blob(['<!DOCTYPE html>\n' + document.documentElement.outerHTML], { type: 'text/html' }), 'visa-click-to-pay.html');
+  save(new Blob(['<!DOCTYPE html>\n' + document.documentElement.outerHTML], { type: 'text/html' }), SLUG + '.html');
   if (keep >= 0) show(keep);
   if (wasPlaying) play();
 });

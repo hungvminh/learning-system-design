@@ -1,0 +1,15 @@
+{
+  "name": "lsd-engine",
+  "version": "1.0.0",
+  "description": "Shared SVG diagram rendering engine for the system-design lessons.",
+  "license": "MIT",
+  "type": "commonjs",
+  "main": "render.js",
+  "scripts": {
+    "build": "node build.js",
+    "build:lesson": "node build.js"
+  },
+  "dependencies": {
+    "@resvg/resvg-js": "^2.6.2"
+  }
+}
