@@ -10,9 +10,12 @@
  *   lessons/<slug>/dist/diagram.svg
  *   lessons/<slug>/dist/diagram.png  (only if @resvg/resvg-js is installed)
  *
- * Then it regenerates:
- *   docs/index.html   GitHub Pages landing page linking every lesson
- *   README.md         catalog table (between CATALOG markers)
+ * Then it regenerates the GitHub Pages site under docs/ (which is the published
+ * site root, so everything it links to must live inside docs/):
+ *   docs/index.html                      landing gallery linking every lesson
+ *   docs/lessons/<slug>/index.html       copy of the lesson's interactive page
+ *   docs/lessons/<slug>/diagram.{png,svg}
+ *   README.md                            catalog table (between CATALOG markers)
  */
 const fs = require('fs');
 const path = require('path');
@@ -62,26 +65,37 @@ function buildLesson(slug) {
   const footnote = `Illustrative diagram of a publicly documented flow${refs ? '. Sources: ' + refs : ''}. ` +
     `Not affiliated with or endorsed by any trademark holder; wording is paraphrased.`;
 
-  const html = TEMPLATE
+  // Render the interactive page. `crumbHref` points back to the gallery and
+  // differs by location: 3 levels up from lessons/<slug>/dist, 2 from docs/lessons/<slug>.
+  const render = (crumbHref) => TEMPLATE
     .replace(/__TITLE__/g, esc(m.title))
     .replace(/__H1__/g, esc(m.title))
-    .replace(/__CRUMBS__/g, '<a href="../../../docs/index.html">All lessons</a> &nbsp;›&nbsp; ' + esc(m.category || 'Lesson'))
+    .replace(/__CRUMBS__/g, `<a href="${crumbHref}">All lessons</a> &nbsp;›&nbsp; ` + esc(m.category || 'Lesson'))
     .replace(/__HINT__/g, esc(m.hint || 'Tip: click an actor box to jump to the next step that involves it.'))
     .replace(/__FOOTNOTE__/g, footnote)
     .replace(/__SLUG__/g, slug)
     .replace('__SVG__', webSvg.trim())
     .replace('__STEPS__', JSON.stringify(lesson.STEPS))
     .replace('__BASE__', JSON.stringify(lesson.BASE));
-  fs.writeFileSync(path.join(distDir, 'index.html'), html);
 
-  console.log(`  ✓ ${slug}  (svg${pngOk ? ' + png' : ', png skipped'} + html)`);
+  // Source copy under lessons/<slug>/dist/ (crumb climbs to repo root, then docs/).
+  fs.writeFileSync(path.join(distDir, 'index.html'), render('../../../docs/index.html'));
+
+  // Published copy under docs/lessons/<slug>/ so the Pages site is self-contained.
+  const pub = path.join(ROOT, 'docs', 'lessons', slug);
+  fs.mkdirSync(pub, { recursive: true });
+  fs.writeFileSync(path.join(pub, 'index.html'), render('../../index.html'));
+  fs.copyFileSync(path.join(distDir, 'diagram.svg'), path.join(pub, 'diagram.svg'));
+  if (pngOk) fs.copyFileSync(path.join(distDir, 'diagram.png'), path.join(pub, 'diagram.png'));
+
+  console.log(`  ✓ ${slug}  (svg${pngOk ? ' + png' : ', png skipped'} + html, published to docs/)`);
   return { slug, meta: m };
 }
 
 function buildDocsIndex(built) {
   const cards = built.map(({ slug, meta }) => {
     const tags = (meta.tags || []).map(t => `<span class="tag">${esc(t)}</span>`).join('');
-    return `    <a class="card" href="../lessons/${slug}/dist/index.html">
+    return `    <a class="card" href="lessons/${slug}/index.html">
       <div class="cat">${esc(meta.category || 'Lesson')}</div>
       <h2>${esc(meta.title)}</h2>
       <p>${esc(meta.summary || meta.subtitle || '')}</p>
